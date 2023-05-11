@@ -1,7 +1,18 @@
 #!/usr/bin/env bash
 
-ENTRIES="index,codec_type:stream_disposition=default,forced:stream_tags=language"
+HARDWARE_DECODE=1
+HARDWARE_ENCODE=1
+GPU_DETECT=$(lspci | grep VGA)
+GPU=
+if [[ "$GPU_DETECT" =~ "Intel" ]]; then
+    GPU=intel
+elif [[ "$GPU_DETECT" =~ "Nvidia" ]]; then
+    GPU=nvidia
+elif [[ "$GPU_DETECT" =~ "AMD" ]]; then
+    GPU=amd
+fi
 
+ENTRIES="index,codec_type:stream_disposition=default,forced:stream_tags=language"
 AUDIO_STREAMS=$(ffprobe -v error \
     -show_entries stream=$ENTRIES \
     -select_streams a \
@@ -9,7 +20,6 @@ AUDIO_STREAMS=$(ffprobe -v error \
     "$1" \
     | grep -i 'default=1\|forced=1\|language=eng\|language=und' \
 )
-
 SUBTITLE_STREAMS=$(ffprobe -v error \
     -show_entries stream=$ENTRIES \
     -select_streams s \
@@ -24,6 +34,8 @@ STREAMS_ARRAY_LENGTH=${#STREAMS_ARRAY[@]}
 # use for loop to read all values and indexes
 for (( i=0; i<${STREAMS_ARRAY_LENGTH}; i++ ));
 do
+    [ "${STREAMS_ARRAY[$i]}" == "" ] && continue
+
     MAPS=${MAPS}$(echo -e "${STREAMS_ARRAY[$i]}" | awk -F"|" '{split($1,stream,"=");printf "-map 0:%d ", stream[2]}')
 
     METADATA=${METADATA}$(echo -e "${STREAMS_ARRAY[$i]}" | awk -F"|" ' \
@@ -46,8 +58,18 @@ do
     ')
 done
 
-PREOPTS="-hwaccel vaapi -hwaccel_device /dev/dri/renderD128 "
-PREOPTS+="-hwaccel_output_format vaapi "
+PREOPTS=""
+if [ $HARDWARE_DECODE == 1 ] || [ $HARDWARE_ENCODE == 1 ]; then
+    if [ $GPU == "amd" ]; then
+        PREOPTS="-hwaccel vaapi -hwaccel_device /dev/dri/renderD128 "
+    fi
+fi
+
+if [ $HARDWARE_ENCODE == 1 ]; then
+    if [ $GPU == "amd" ]; then
+        PREOPTS+="-hwaccel_output_format vaapi "
+    fi
+fi
 
 ENCODER="hevc_vaapi -global_quality 18 "
 # ENCODER="libx265 -crf 18 -preset medium"
