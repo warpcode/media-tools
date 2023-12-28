@@ -49,11 +49,11 @@ do
     DISPOSITION=${DISPOSITION}$(echo -e "${STREAMS_ARRAY[$i]}" | awk -F"|" ' \
         { \
             split($2,codec_type,"="); \
-            split($3,default,"="); \
+            split($3,disposition_default,"="); \
             split($4,forced,"="); \
             printf "-disposition:%s:%d ", substr(codec_type[2],1,1), NR-1 \
         }; \
-        { if(forced[2] == 1) print "forced"; else if(default[2] == 1) print "default"; else print "0";} \
+        { if(forced[2] == 1) print "forced"; else if(disposition_default[2] == 1) print "default"; else print "0";} \
         { print " " } \
     ')
 done
