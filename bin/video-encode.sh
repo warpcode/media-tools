@@ -1,7 +1,43 @@
 #!/usr/bin/env bash
 
 HARDWARE_DECODE=1
-HARDWARE_ENCODE=1
+HARDWARE_ENCODE=0
+HEVC=0
+SOURCE=""
+DEST=""
+
+
+for i in "$@"
+do
+    case $i in
+        --hw)
+            HARDWARE_ENCODE=1
+            shift
+        ;;
+        --hevc)
+            HEVC=1
+            shift
+        ;;
+        *)
+            SOURCE=$1
+            shift
+            DEST=$1
+            shift
+            break
+        ;;
+    esac
+done
+
+if [[ -z "$SOURCE" ]] || [[ ! -r "$SOURCE" ]]; then
+    echo "Source is not readable"
+    exit 1;
+fi
+
+if [[ -z "$DEST" ]]; then
+    echo "Destination cannot be empty"
+    exit 1;
+fi
+
 GPU_DETECT=$(lspci | grep VGA)
 GPU=
 if [[ "$GPU_DETECT" =~ "Intel" ]]; then
@@ -59,25 +95,37 @@ do
 done
 
 PREOPTS=""
+ENCODER=
 if [ $HARDWARE_DECODE == 1 ] || [ $HARDWARE_ENCODE == 1 ]; then
     if [ $GPU == "amd" ]; then
         PREOPTS="-hwaccel vaapi -hwaccel_device /dev/dri/renderD128 "
     fi
 fi
 
+# Default encoder
+if [ $HEVC == 1 ]; then
+    ENCODER="libx265 -crf 18 -preset medium"
+else
+    ENCODER="libx264 -crf 18 -preset medium"
+fi
+
 if [ $HARDWARE_ENCODE == 1 ]; then
     if [ $GPU == "amd" ]; then
         PREOPTS+="-hwaccel_output_format vaapi "
+
+        if [ $HEVC == 1 ]; then
+            ENCODER="hevc_vaapi -global_quality 18 "
+        else
+            ENCODER="h264_vaapi -global_quality 18 "
+        fi
     fi
 fi
 
-ENCODER="hevc_vaapi -global_quality 18 "
-# ENCODER="libx265 -crf 18 -preset medium"
 set -o xtrace
 exec ffmpeg \
     $PREOPTS \
     -y \
-    -i "$1" \
+    -i "$SOURCE" \
     -map 0:v \
     $MAPS \
     -map 0:d? \
@@ -88,7 +136,7 @@ exec ffmpeg \
     -c copy \
     -c:v $ENCODER \
     `# If output is mkv, ffmpeg will default the first track if there are no other defaults for that stream type` \
-    $( [ "${2##*.}" == 'mkv' ] && echo "-default_mode infer_no_subs" ) \
+    $( [ "${DEST##*.}" == 'mkv' ] && echo "-default_mode infer_no_subs" ) \
     -probesize 2048M \
     -analyzeduration 2048M \
-    "$2"
+    "$DEST"
