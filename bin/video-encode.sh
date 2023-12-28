@@ -48,33 +48,12 @@ elif [[ "$GPU_DETECT" =~ "AMD" ]]; then
     GPU=amd
 fi
 
-ENTRIES="index,codec_type:stream_disposition=default,forced:stream_tags=language"
-AUDIO_STREAMS=$(ffprobe -v error \
-    -show_entries stream=$ENTRIES \
-    -select_streams a \
-    -of compact=p=0 \
-    "$1" \
-    | grep -i 'default=1\|forced=1\|language=eng\|language=und' \
-)
-SUBTITLE_STREAMS=$(ffprobe -v error \
-    -show_entries stream=$ENTRIES \
-    -select_streams s \
-    -of compact=p=0 \
-    "$1" \
-    | grep -i 'language=eng\|language=und' \
-)
+for line in $("${0%/*}/video-filter-streams" "$SOURCE"); do
+    [ "$line" == "" ] && continue
 
-declare -a STREAMS_ARRAY=("$AUDIO_STREAMS" "$SUBTITLE_STREAMS")
-STREAMS_ARRAY_LENGTH=${#STREAMS_ARRAY[@]}
-#
-# use for loop to read all values and indexes
-for (( i=0; i<${STREAMS_ARRAY_LENGTH}; i++ ));
-do
-    [ "${STREAMS_ARRAY[$i]}" == "" ] && continue
+    MAPS=${MAPS}$(echo -e "$line" | awk -F"|" '{split($1,stream,"=");printf "-map 0:%d ", stream[2]}')
 
-    MAPS=${MAPS}$(echo -e "${STREAMS_ARRAY[$i]}" | awk -F"|" '{split($1,stream,"=");printf "-map 0:%d ", stream[2]}')
-
-    METADATA=${METADATA}$(echo -e "${STREAMS_ARRAY[$i]}" | awk -F"|" ' \
+    METADATA=${METADATA}$(echo -e "$line" | awk -F"|" ' \
         { \
             split($2,codec_type,"="); \
             split($5,lang,"="); \
@@ -82,7 +61,7 @@ do
         } \
     ')
 
-    DISPOSITION=${DISPOSITION}$(echo -e "${STREAMS_ARRAY[$i]}" | awk -F"|" ' \
+    DISPOSITION=${DISPOSITION}$(echo -e "$line" | awk -F"|" ' \
         { \
             split($2,codec_type,"="); \
             split($3,disposition_default,"="); \
