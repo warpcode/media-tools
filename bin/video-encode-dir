@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+
+set -e
+
+SOURCE=$1
+shift
+
+DEST=$1
+shift
+
+PASSOPT=""
+
+for i in "$@"
+do
+    case $i in
+        --)
+            shift
+            PASSOPT="$@"
+            break
+        ;;
+    esac
+done
+
+if [[ -z "$SOURCE" ]] || [[ ! -d "$SOURCE" ]]; then
+    echo "Source is not a directory"
+    exit 1;
+fi
+
+if [[ -z "$DEST" ]]; then
+    echo "Destination cannot be empty"
+    exit 1;
+fi
+
+if [[ -a "$DEST" ]] && [[ ! -d "$DEST" ]]; then
+    echo "Destination exists and is not a directory"
+    exit 1
+fi
+
+[[ ! -d "$DEST" ]] && mkdir -p "$DEST"
+
+if [ "$(readlink -f "$SOURCE")" == "$(readlink -f "$DEST")" ]; then
+    echo "Destination cannot be the same as the source"
+    exit 1
+fi
+
+for file in $SOURCE/*; do
+    [ -f "$file" ] || continue
+
+    FILETYPE=$(ffprobe -loglevel error -show_entries stream=codec_type -of default=nw=1 "$file" 2> /dev/null)
+
+    # Ensure we have a video with audio
+    # images and text also appear as video in ffmpeg
+    # so this ensures we just get videos
+    [[ "$FILETYPE" == *"codec_type=video"* ]] || continue;
+    [[ "$FILETYPE" == *"codec_type=audio"* ]] || continue;
+
+    filename=$(basename "$file")
+
+    echo "Processing: $file"
+    "${0%/*}/video-encode" $PASSOPT "${file}" "$DEST/${filename}"
+    echo "Finished: $file"
+done
