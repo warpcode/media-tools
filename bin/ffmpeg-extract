@@ -35,7 +35,7 @@ fi
 if ffmpeg -i "$1" 2>&1 | grep 'Invalid data found' #check if it's video file
 then
    echo "$1 is NOT A VALID FILE!"
-   exit	   	
+   exit
 fi
 
 FILENAME="${1%.*}"
@@ -58,13 +58,13 @@ do
     COPY_TYPE=""
     if [[ "$STREAM_LINE" == *Audio* ]] && [[ $IGNORE_AUDIO == "n" ]] #check if it's an audio stream
     then
-        COPY_TYPE="-acodec copy" 
-        
+        COPY_TYPE="-acodec copy"
+
         if [[ "$STREAM_LINE" == *aac* ]]
-        then   
+        then
             STREAM_TYPE="m4a"
         fi
-        
+
     elif  [[ "$STREAM_LINE" == *Video* ]] && [[ $IGNORE_VIDEO == "n" ]] #check if it's a video stream
     then
         COPY_TYPE="-vcodec copy"
@@ -72,32 +72,32 @@ do
     elif  [[ "$STREAM_LINE" == *Subtitle* ]] && [[ $IGNORE_SUBS == "n" ]] #check if it's a subtitle stream
     then
         COPY_TYPE="-scodec copy"
-        
+
         if [[ "$STREAM_TYPE" == "subrip" ]]
         then
-            # as far as I can tell, ssa and ass are the same    
+            # as far as I can tell, ssa and ass are the same
             STREAM_TYPE="srt"
             COPY_TYPE="-scodec srt"
         fi
-        
+
         if [[ "$STREAM_TYPE" == "mov_text" ]]
         then
             if [[ "$STREAM_LINE" == *tx3g* ]]
                 then
-                # as far as I can tell, ssa and ass are the same    
+                # as far as I can tell, ssa and ass are the same
                 STREAM_TYPE="srt"
                 COPY_TYPE="-scodec srt"
             else
                 continue
             fi
         fi
-        
+
         if [[ "$STREAM_TYPE" == "ssa" ]]
         then
-            # as far as I can tell, ssa and ass are the same    
+            # as far as I can tell, ssa and ass are the same
             STREAM_TYPE="ass"
         fi
-        
+
         if [[ ! "$STREAM_TYPE" == "ass" ]] && [[ ! "$STREAM_TYPE" == "srt" ]]
         then
             # Unknown format so assume bitmap subs and force inside an mkv
@@ -106,7 +106,7 @@ do
     else
         continue
     fi
-  
+
     if [[ "$STREAM_TYPE" == '' ]];then
       continue
     fi
@@ -114,10 +114,10 @@ do
     if [[ ! "$FFMPEG_MAP" == '' ]];then
       FFMPEG_MAP="$FFMPEG_MAP "
     fi
-    
+
     OUTPUT_FILE="${FILENAME}-s${COUNTER}.${STREAM_TYPE}"
     echo "Extracting stream $STREAM to \"$OUTPUT_FILE\""
-    
+
     FFMPEG_MAP="${FFMPEG_MAP}${COPY_TYPE} -map 0:$STREAM -y \"$OUTPUT_FILE\""
     let COUNTER=COUNTER+1
 done < <(ffprobe "$1" 2>&1 | grep "Stream #")
@@ -125,7 +125,7 @@ done < <(ffprobe "$1" 2>&1 | grep "Stream #")
 if [[ "$FFMPEG_MAP" == "" ]]
 then
     echo "Nothing to extract"
-    exit	
+    exit
 fi
 
 eval "ffmpeg -v error -stats -i \"$1\" $FFMPEG_MAP < /dev/null"
