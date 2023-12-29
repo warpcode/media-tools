@@ -6,7 +6,6 @@ HEVC=0
 SOURCE=""
 DEST=""
 
-
 for i in "$@"
 do
     case $i in
