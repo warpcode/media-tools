@@ -34,7 +34,7 @@ SUBTITLE_STREAMS=$(ffprobe -v error \
     | grep -i 'language=eng\|language=und' \
 )
 
-declare -a STREAMS_ARRAY=("$AUDIO_STREAMS" "$AUDIO_STREAMS" "$SUBTITLE_STREAMS")
+declare -a STREAMS_ARRAY=("$AUDIO_STREAMS" "$SUBTITLE_STREAMS")
 
 for stream in "${STREAMS_ARRAY[@]}"
 do
