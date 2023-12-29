@@ -9,7 +9,7 @@ fi
 if ffmpeg -i "$1" 2>&1 | grep 'Invalid data found'		#check if it's video file
 then
    echo "$1 is NOT A VALID FILE!"
-   exit	   	
+   exit
 fi
 
 if [[ "$2" == '' ]]
