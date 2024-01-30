@@ -115,6 +115,7 @@ exec ffmpeg \
     -c:v $ENCODER \
     `# If output is mkv, ffmpeg will default the first track if there are no other defaults for that stream type` \
     $( [ "${DEST##*.}" == 'mkv' ] && echo "-default_mode infer_no_subs" ) \
+    $( [ "${DEST##*.}" == 'mp4' ] && echo "-movflags +faststart" ) \
     -probesize 2048M \
     -analyzeduration 2048M \
     "$DEST"
